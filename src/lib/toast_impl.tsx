@@ -1,16 +1,12 @@
 import Swal from 'sweetalert2'
 import 'sweetalert2/dist/sweetalert2.min.css'
 
-// SweetAlert2-based implementation for toasts and modals
-// Keeps deduplication/overlay behavior from the previous implementation.
-
 export type ToastOpts = {
   duration?: number
-  key?: string // chave para deduplicação (opcional)
+  key?: string
   modal?: boolean
 }
 
-// Mapa para evitar toasts duplicados: key -> Promise retornada pelo Swal
 const activeToasts = new Map<string, Promise<any>>()
 let modalCount = 0
 

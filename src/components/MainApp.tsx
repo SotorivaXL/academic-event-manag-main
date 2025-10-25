@@ -36,7 +36,6 @@ export function MainApp() {
   const handleEventDelete = async (eventId: string) => {
     const success = await deleteEvent(eventId)
     if (success) {
-      // Cleanup related enrollments, attendances, and certificates
       setEnrollments((current) => (current || []).filter(enrollment => enrollment.eventId !== eventId))
       const enrollmentIds = (enrollments || [])
         .filter(enrollment => enrollment.eventId === eventId)
@@ -108,7 +107,6 @@ export function MainApp() {
               onEventCreate={handleEventCreate}
               onEventUpdate={handleEventUpdate}
               onEventDelete={handleEventDelete}
-              fetchEventById={getEventById}
             />
           </TabsContent>
 

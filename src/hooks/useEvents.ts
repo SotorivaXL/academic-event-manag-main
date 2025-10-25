@@ -114,7 +114,7 @@ export function useEvents() {
       // Validate sessions if provided
       const validation = validateEventCapacityAgainstSessions(capacity, eventData.sessions);
       if (!validation.ok) {
-        showError(validation.message);
+        showError(validation.message?.toString() || 'Erro de validação de capacidade');
         return null;
       }
 
@@ -178,7 +178,7 @@ export function useEvents() {
 
       const validation = validateEventCapacityAgainstSessions(capacity, eventData.sessions || existing?.sessions);
       if (!validation.ok) {
-        showError(validation.message);
+        showError(validation.message?.toString() || 'Erro de validação de capacidade');
         return null;
       }
 

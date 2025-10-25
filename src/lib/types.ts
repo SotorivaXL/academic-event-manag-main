@@ -9,13 +9,11 @@ export interface Event {
   sessions: Session[];
   minAttendancePercentage: number;
   status: 'draft' | 'published' | 'completed';
-  eventDays?: EventDay[]; // Optional array of event days from API
-  // optional metadata returned by the API
+  eventDays?: EventDay[]; 
   tracks?: string[];
   speakers?: string[];
 }
 
-// API Event structure from backend
 export interface ApiEvent {
   id: number;
   client_id: number;
@@ -28,7 +26,6 @@ export interface ApiEvent {
   start_at: string | null;
   end_at: string | null;
   status: string;
-  // optional arrays that some endpoints may return
   tracks?: string[];
   speakers?: string[];
 }
@@ -44,7 +41,6 @@ export interface Session {
   sessionType?: string;
 }
 
-// API Event Day structure from backend
 export interface ApiEventDay {
   id: number;
   event_id: number;
