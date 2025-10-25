@@ -275,7 +275,7 @@ export function EventDaysDialog({ eventId, eventTitle, trigger }: EventDaysDialo
                               size="sm"
                               variant="ghost"
                               onClick={() => handleDelete(day)}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive-foreground"
+                              className="h-8 w-8 p-0 text-destructive hover:bg-secondary"
                               disabled={deletingDayId === day.id}
                             >
                               <Trash className="h-3 w-3" />

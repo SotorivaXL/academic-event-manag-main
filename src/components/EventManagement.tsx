@@ -314,7 +314,7 @@ export function EventManagement({
                       size="sm" 
                       variant="outline" 
                       onClick={() => handleDelete(event)}
-                      className="text-destructive hover:text-destructive-foreground"
+                      className="text-destructive hover:bg-secondary"
                     >
                       Excluir
                     </Button>
