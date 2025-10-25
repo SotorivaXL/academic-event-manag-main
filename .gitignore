@@ -30,5 +30,6 @@ packages
 pids
 .file-manifest
 .devcontainer/
+package-lock.json
 
 .spark-workbench-id
