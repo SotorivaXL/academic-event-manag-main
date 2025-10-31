@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Event } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Calendar, MapPin, CircleNotch, Clock } from '@phosphor-icons/react';
+import { Plus, Calendar, MapPin, CircleNotch, Clock, MagnifyingGlass } from '@phosphor-icons/react';
 import { showSuccess, showError, showInfo, confirm as showConfirm } from '@/lib/toast';
 import { EventDaysManagement } from '@/components/EventDaysManagement';
 
@@ -31,6 +31,8 @@ export function EventManagement({
   const [isCreating, setIsCreating] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [managingDaysEvent, setManagingDaysEvent] = useState<Event | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'draft' | 'published' | 'completed'>('all');
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
@@ -62,6 +64,22 @@ export function EventManagement({
     setIsCreating(false);
     setEditingEvent(null);
   };
+
+  const filteredEvents = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+
+    return events.filter((event) => {
+      const matchesTerm = term.length === 0 || [
+        event.title,
+        event.description,
+        event.location
+      ].some((field) => field?.toLowerCase().includes(term));
+
+      const matchesStatus = statusFilter === 'all' || event.status === statusFilter;
+
+      return matchesTerm && matchesStatus;
+    });
+  }, [events, searchTerm, statusFilter]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,6 +151,53 @@ export function EventManagement({
             Novo Evento
           </Button>
         )}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-[1.5fr,1fr,auto] items-end">
+        <div className="space-y-2">
+          <Label htmlFor="event-search">Buscar eventos</Label>
+          <div className="relative">
+            <MagnifyingGlass className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="event-search"
+              placeholder="Busque por título, descrição ou local"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="event-status-filter">Status</Label>
+          <Select
+            value={statusFilter}
+            onValueChange={(value: 'all' | 'draft' | 'published' | 'completed') => setStatusFilter(value)}
+          >
+            <SelectTrigger id="event-status-filter">
+              <SelectValue placeholder="Todos os status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="published">Publicado</SelectItem>
+              <SelectItem value="draft">Rascunho</SelectItem>
+              <SelectItem value="completed">Concluído</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex gap-2 md:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setSearchTerm('');
+              setStatusFilter('all');
+            }}
+          >
+            Limpar filtros
+          </Button>
+        </div>
       </div>
 
       {loading && !isCreating ? (
@@ -261,7 +326,7 @@ export function EventManagement({
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {events.map((event) => (
+            {filteredEvents.map((event) => (
               <Card key={event.id} className="hover:shadow-md transition-shadow">
                 <CardHeader className="pb-3">
                   <div className="flex justify-between items-start">
@@ -323,6 +388,26 @@ export function EventManagement({
               </Card>
             ))}
           </div>
+
+          {filteredEvents.length === 0 && events.length > 0 && !isCreating && (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center space-y-3">
+                <MagnifyingGlass className="h-12 w-12 text-muted-foreground" />
+                <div>
+                  <p className="text-lg font-medium">Nenhum evento encontrado</p>
+                  <p className="text-sm text-muted-foreground">
+                    Ajuste os filtros ou limpe a busca para visualizar outros eventos.
+                  </p>
+                </div>
+                <Button variant="outline" onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('all');
+                }}>
+                  Limpar filtros
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {events.length === 0 && !isCreating && (
             <Card>
