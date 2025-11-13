@@ -220,9 +220,22 @@ export function useEvents() {
       showSuccess('Evento excluído com sucesso');
       return true;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro ao excluir evento';
+      // Inspect error message to provide a more helpful toast when the backend
+      // refuses deletion because the event still has days (sessions) associated.
+      const rawMsg = err instanceof Error ? err.message : String(err);
       console.error('[useEvents] deleteEvent error:', err);
-      showError(errorMessage);
+
+      // Look for common indicators that deletion failed due to existing child records.
+      const isHasDaysError = /\b409\b|conflict|dias|days|existing\s+days|has\s+days|children|foreign\s+key|constraint|cannot\s+delete|has\s+children/i.test(rawMsg);
+
+      if (isHasDaysError) {
+        const userMsg = 'Não foi possível excluir o evento: existem dias cadastrados neste evento. Exclua primeiro os dias do evento e tente novamente.';
+        showError(userMsg);
+      } else {
+        const errorMessage = rawMsg || 'Erro ao excluir evento';
+        showError(errorMessage);
+      }
+
       return false;
     }
   };
