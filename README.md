@@ -1,23 +1,17 @@
-# ✨ Welcome to Your Spark Template!
-You've just launched your brand-new Spark Template Codespace — everything’s fired up and ready for you to explore, build, and create with Spark!
+# Nome do Projeto
 
-This template is your blank canvas. It comes with a minimal setup to help you get started quickly with Spark development.
+Aplicação React + TypeScript para gerenciamento de eventos e dias de evento.
 
-🚀 What's Inside?
-- A clean, minimal Spark environment
-- Pre-configured for local development
-- Ready to scale with your ideas
-  
-🧠 What Can You Do?
+## Requisitos
+- Node.js (recomenda-se >= 18)
+- npm (recomenda-se >= 9) ou yarn
+- Windows (instruções adaptadas)
 
-Right now, this is just a starting point — the perfect place to begin building and testing your Spark applications.
+## Instalação
+1. Abra o terminal integrado do `IntelliJ IDEA` ou PowerShell/CMD na pasta do projeto.
+2. Instale dependências:
+    - Usando npm:
+      npm install
 
-🧹 Just Exploring?
-No problem! If you were just checking things out and don’t need to keep this code:
-
-- Simply delete your Spark.
-- Everything will be cleaned up — no traces left behind.
-
-📄 License For Spark Template Resources 
-
-The Spark Template files and resources from GitHub are licensed under the terms of the MIT license, Copyright GitHub, Inc.
+## Executar em desenvolvimento
+- npm run dev
