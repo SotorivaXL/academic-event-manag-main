@@ -1,16 +1,9 @@
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from './ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
-import { GraduationCap, User, SignOut } from '@phosphor-icons/react';
-import toast from '@/lib/toast';
+import { GraduationCap, User } from '@phosphor-icons/react';
 
 export function AppHeader() {
-  const { user, logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-    toast.info('Logout realizado com sucesso');
-  };
+  const { user } = useAuth();
 
   return (
     <header className="border-b bg-card">
@@ -32,22 +25,11 @@ export function AppHeader() {
             <p className="font-medium">{user?.username}</p>
             <p className="text-muted-foreground">Tenant: {user?.tenant}</p>
           </div>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
-                <User className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <SignOut className="mr-2 h-4 w-4" />
-                Sair
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+
+          {/* Simplified: keep user icon but removed logout action from header (moved to sidebar footer) */}
+          <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+            <User className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </header>

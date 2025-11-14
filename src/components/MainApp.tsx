@@ -15,12 +15,14 @@ import { StudentManagement } from "./StudentManagement";
 import { AttendanceTracking } from "./AttendanceTracking";
 import { CertificateManagement } from "./CertificateManagement";
 import { AppHeader } from "./AppHeader";
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Calendar,
   Users,
   QrCode,
   Certificate as CertificateIcon,
   ChartBar,
+  SignOut,
 } from "@phosphor-icons/react";
 import {
   Sidebar,
@@ -41,9 +43,9 @@ export function MainApp() {
     createEvent,
     updateEvent,
     deleteEvent,
-    getEventById,
   } = useEvents();
 
+  const { logout } = useAuth();
   const sidebarThemeOverrides: DeepPartial<SidebarTheme> = {
     root: {
       inner:
@@ -74,7 +76,7 @@ export function MainApp() {
     },
   };
 
-  const [students, setStudents] = useKV<Student[]>("students", []);
+  const [students] = useKV<Student[]>("students", []);
   const [enrollments, setEnrollments] = useKV<Enrollment[]>("enrollments", []);
   const [attendances, setAttendances] = useKV<Attendance[]>("attendances", []);
   const [certificates, setCertificates] = useKV<Certificate[]>(
@@ -189,36 +191,58 @@ export function MainApp() {
         }}
         theme={sidebarThemeOverrides}
       >
-        <div className="flex items-center justify-between px-4 py-4 lg:hidden">
-          <span className="text-sm font-medium text-white/70">Menu</span>
-          <button
-            type="button"
-            className="rounded-md border border-white/20 px-2 py-1 text-xs font-medium text-white/70 transition-colors hover:bg-white/10"
-            onClick={() => setSidebarOpen(false)}
-          >
-            Fechar
-          </button>
+        {/* Ensure sidebar children are stacked in a column so footer stays at the bottom */}
+        <div className="flex h-full flex-col">
+         <div className="flex items-center justify-between px-4 py-4 lg:hidden">
+           <span className="text-sm font-medium text-white/70">Menu</span>
+           <button
+             type="button"
+             className="rounded-md border border-white/20 px-2 py-1 text-xs font-medium text-white/70 transition-colors hover:bg-white/10"
+             onClick={() => setSidebarOpen(false)}
+           >
+             Fechar
+           </button>
+         </div>
+         <SidebarItems>
+           <SidebarItemGroup>
+             {menuItems.map((item) => (
+               <SidebarItem
+                 key={item.id}
+                 href="#"
+                 icon={item.icon}
+                 active={activeTab === item.id}
+                 onClick={(event) => {
+                   event.preventDefault();
+                   setActiveTab(item.id);
+                   setSidebarOpen(false);
+                 }}
+               >
+                 {item.label}
+               </SidebarItem>
+             ))}
+           </SidebarItemGroup>
+         </SidebarItems>
+
+         {/* Footer with logout item styled like other sidebar options */}
+         <div className="mt-auto border-t border-white/10">
+           <SidebarItems>
+             <SidebarItemGroup>
+               <SidebarItem
+                 href="#"
+                 icon={SignOut}
+                 onClick={(event) => {
+                   event.preventDefault();
+                   logout();
+                   import('@/lib/toast').then((m) => m.showInfo('Logout realizado', 'Você será redirecionado para a tela de login.')).catch(()=>{});
+                 }}
+               >
+                 Sair
+               </SidebarItem>
+             </SidebarItemGroup>
+           </SidebarItems>
+         </div>
         </div>
-        <SidebarItems>
-          <SidebarItemGroup>
-            {menuItems.map((item) => (
-              <SidebarItem
-                key={item.id}
-                href="#"
-                icon={item.icon}
-                active={activeTab === item.id}
-                onClick={(event) => {
-                  event.preventDefault();
-                  setActiveTab(item.id);
-                  setSidebarOpen(false);
-                }}
-              >
-                {item.label}
-              </SidebarItem>
-            ))}
-          </SidebarItemGroup>
-        </SidebarItems>
-      </Sidebar>
+       </Sidebar>
 
       <div className="flex min-h-screen flex-col">
         <div ref={headerRef} className="relative z-50">

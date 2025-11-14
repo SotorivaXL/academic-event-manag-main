@@ -229,11 +229,12 @@ export function useEvents() {
       const isHasDaysError = /\b409\b|conflict|dias|days|existing\s+days|has\s+days|children|foreign\s+key|constraint|cannot\s+delete|has\s+children/i.test(rawMsg);
 
       if (isHasDaysError) {
-        const userMsg = 'Não foi possível excluir o evento: existem dias cadastrados neste evento. Exclua primeiro os dias do evento e tente novamente.';
-        showError(userMsg);
+        const title = 'Não foi possível excluir o evento';
+        const description = 'Existem dias cadastrados neste evento. Exclua primeiro os dias do evento e tente novamente.';
+        showError(title, description);
       } else {
         const errorMessage = rawMsg || 'Erro ao excluir evento';
-        showError(errorMessage);
+        showError('Erro ao excluir evento', errorMessage);
       }
 
       return false;
