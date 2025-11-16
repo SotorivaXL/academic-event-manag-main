@@ -122,8 +122,37 @@ export interface UpdateClientRequest {
     config_json?: Record<string, unknown>;
 }
 
+export interface EventEnrollmentResponse {
+    id: number;
+    student_id: number;
+    event_id: number;
+    status: string;
+    student?: Student;
+    event?: ApiEvent;
+}
+
+// === Enrollment (Inscrição) ===
+export interface EnrollmentResponse {
+    id: number;
+    student_id: number;
+    event_id: number;
+    status: string;
+}
+
+export interface EnrollmentWithRelations extends EnrollmentResponse {
+    student?: {
+        id: number;
+        name: string;
+        email: string;
+        cpf: string;
+        ra: string;
+        phone?: string;
+    };
+    event?: ApiEvent;
+}
+
 const API_ROOT = 'https://events-backend-zug5.onrender.com/api/v1';
-const TENANT = 'demo'; // depois dá pra pegar do usuário logado
+const TENANT = 'demo';
 
 class ApiService {
     private static baseURL = `${API_ROOT}/${TENANT}`;
@@ -382,12 +411,49 @@ class ApiService {
     });
   }
 
-  // Enrollment endpoints
-  static async listEnrollments(eventId: string): Promise<any[]> {
-    // Backend expects query param event_id
-    const endpoint = `/enrollments?event_id=${encodeURIComponent(eventId)}`;
-    return this.request<any[]>(endpoint);
-  }
+// Enrollment endpoints
+    static async listEnrollments(
+        eventId: string | number
+    ): Promise<EnrollmentWithRelations[]> {
+        // usa o endpoint por evento + expand pra trazer student e event
+        const endpoint = `/events/${eventId}/enrollments?expand=student,event`;
+        return this.request<EnrollmentWithRelations[]>(endpoint);
+    }
+
+    static async enrollStudent(
+        eventId: string | number,
+        studentId: string | number,
+        options?: { idempotent?: boolean; reactivate_if_canceled?: boolean }
+    ): Promise<any> {
+        const params = new URLSearchParams();
+        params.set('student_id', String(studentId));
+
+        // se quiser, pode sobrescrever os defaults
+        if (options?.idempotent !== undefined) {
+            params.set('idempotent', String(options.idempotent));
+        }
+        if (options?.reactivate_if_canceled !== undefined) {
+            params.set('reactivate_if_canceled', String(options.reactivate_if_canceled));
+        }
+
+        return this.request<any>(`/events/${eventId}/enroll?${params.toString()}`, {
+            method: 'POST',
+        });
+    }
+
+    static async enrollStudentInEvent(eventId: string | number, studentId: number): Promise<EnrollmentResponse> {
+        return this.request<EnrollmentResponse>(`/events/${eventId}/enroll`, {
+            method: 'POST',
+            body: JSON.stringify({ student_id: studentId }),
+        });
+    }
+
+// ApiService
+    static async cancelEnrollment(enrollmentId: number): Promise<void> {
+        return this.request<void>(`/enrollments/${enrollmentId}/cancel`, {
+            method: 'POST',
+        });
+    }
 
     static async getCurrentClient(): Promise<Client> {
         return this.request<Client>('/client');

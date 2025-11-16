@@ -17,6 +17,7 @@ import { CertificateManagement } from "./CertificateManagement";
 import { AppHeader } from "./AppHeader";
 import { useAuth } from "@/contexts/AuthContext";
 import { ClientManagement } from "./ClientManagement";
+import { EnrollmentManagement } from "./EnrollmentManagement";
 import {
     Calendar,
     Users,
@@ -25,6 +26,7 @@ import {
     ChartBar,
     SignOut,
     Buildings,
+    ClipboardText,
 } from "@phosphor-icons/react";
 import {
     Sidebar,
@@ -42,7 +44,7 @@ type DeepPartial<T> = {
 type MenuItem = {
     id: string;
     label: string;
-    icon: any; // poderia ser um tipo mais estrito, mas isso aqui é suficiente
+    icon: any;
     adminOnly?: boolean;
 };
 
@@ -103,6 +105,7 @@ export function MainApp() {
         { id: "dashboard", label: "Dashboard", icon: ChartBar },
         { id: "events", label: "Eventos", icon: Calendar },
         { id: "students", label: "Alunos", icon: Users },
+        { id: "enrollments", label: "Inscrições", icon: ClipboardText },
         { id: "attendance", label: "Presenças", icon: QrCode },
         { id: "certificates", label: "Certificados", icon: CertificateIcon },
         { id: "clients", label: "Clientes", icon: Buildings, adminOnly: true },
@@ -333,6 +336,12 @@ export function MainApp() {
                                     events={events || []}
                                     enrollments={enrollments || []}
                                     onEnrollmentCreate={handleEnrollmentCreate}
+                                />
+                            </TabsContent>
+
+                            <TabsContent value="enrollments">
+                                <EnrollmentManagement
+                                    events={events || []}
                                 />
                             </TabsContent>
 
