@@ -1,14 +1,25 @@
-import { Student, ApiEvent, ApiEventDay } from './types';
+import { Student, ApiEvent, ApiEventDay, Client } from './types';
 
 export interface LoginRequest {
   username: string;
   password: string;
 }
 
+export interface LoginUserPayload {
+    id: number;
+    name: string;
+    email: string;
+    status: string;
+    mfa: boolean;
+    roles: string[];
+    role: string;
+}
+
 export interface LoginResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
+    access_token: string;
+    refresh_token: string;
+    token_type: string;
+    user: LoginUserPayload;
 }
 
 export interface CreateStudentRequest {
@@ -84,34 +95,63 @@ export interface UpdateEventDayRequest {
 
 export interface EventDayResponse extends ApiEventDay {}
 
-const API_BASE_URL = 'https://events-backend-zug5.onrender.com/api/v1/demo';
+// === Requests para Client ===
+export interface CreateClientRequest {
+    name: string;
+    cnpj: string;
+    slug: string;
+    logo_url: string;
+    contact_email: string;
+    contact_phone?: string | null;
+    certificate_template_html: string;
+    default_min_presence_pct: number;
+    lgpd_policy_text: string;
+    config_json: Record<string, unknown>;
+}
+
+export interface UpdateClientRequest {
+    name?: string;
+    cnpj?: string;
+    slug?: string;
+    logo_url?: string;
+    contact_email?: string;
+    contact_phone?: string | null;
+    certificate_template_html?: string;
+    default_min_presence_pct?: number;
+    lgpd_policy_text?: string;
+    config_json?: Record<string, unknown>;
+}
+
+const API_ROOT = 'https://events-backend-zug5.onrender.com/api/v1';
+const TENANT = 'demo'; // depois dá pra pegar do usuário logado
 
 class ApiService {
-  private static baseURL = API_BASE_URL;
-  private static refreshingPromise: Promise<boolean> | null = null;
-  private static navigator = typeof window !== 'undefined' ? window.navigator : null;
+    private static baseURL = `${API_ROOT}/${TENANT}`;
+    private static refreshingPromise: Promise<boolean> | null = null;
+    private static navigator = typeof window !== 'undefined' ? window.navigator : null;
 
-  static async login(credentials: LoginRequest): Promise<LoginResponse> {
-    const formData = new URLSearchParams();
-    formData.append('username', credentials.username);
-    formData.append('password', credentials.password);
+    static async login(credentials: LoginRequest): Promise<LoginResponse> {
+        const formData = new URLSearchParams();
+        formData.append('username', credentials.username);
+        formData.append('password', credentials.password);
 
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData,
-    });
+        const response = await fetch(`${this.baseURL}/auth/login`, {  // <-- usa baseURL
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData,
+        });
 
-    if (!response.ok) {
-      throw new Error('Credenciais inválidas');
+        if (!response.ok) {
+            throw new Error('Credenciais inválidas');
+        }
+
+        const result: LoginResponse = await response.json();
+        this.storeTokens(result.access_token, result.refresh_token);
+        return result;
     }
 
-    const result: LoginResponse = await response.json();
-    this.storeTokens(result.access_token, result.refresh_token);
-    return result;
-  }
 
   static logout(): void {
     localStorage.removeItem('access_token');
@@ -132,130 +172,120 @@ class ApiService {
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
-  /**
-   * Try to refresh access token using refresh_token. Returns true if succeeded.
-   * Prevents concurrent refreshes by returning the same promise while a refresh is in progress.
-   */
-  private static async refreshAccessToken(): Promise<boolean> {
-    if (this.refreshingPromise) return this.refreshingPromise;
+    private static async refreshAccessToken(): Promise<boolean> {
+        if (this.refreshingPromise) return this.refreshingPromise;
 
-    const refreshToken = localStorage.getItem('refresh_token');
-    if (!refreshToken) {
-      return false;
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (!refreshToken) {
+            return false;
+        }
+
+        this.refreshingPromise = (async () => {
+            try {
+                const res = await fetch(`${this.baseURL}/auth/refresh`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: refreshToken }), // <-- AQUI É "token"
+                });
+
+                if (!res.ok) {
+                    this.logout();
+                    return false;
+                }
+
+                const data = await res.json().catch(() => null) as any;
+                if (!data || !data.access_token) {
+                    this.logout();
+                    return false;
+                }
+
+                const newAccess = data.access_token as string;
+                const newRefresh = (data.refresh_token as string) || refreshToken;
+                this.storeTokens(newAccess, newRefresh);
+                return true;
+            } catch (err) {
+                console.error('[ApiService] refreshAccessToken error', err);
+                this.logout();
+                return false;
+            } finally {
+                this.refreshingPromise = null;
+            }
+        })();
+
+        return this.refreshingPromise;
     }
 
-    this.refreshingPromise = (async () => {
-      try {
-        const res = await fetch(`${this.baseURL}/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-
-        if (!res.ok) {
-          // Refresh failed (expired/invalid) -> logout
-          this.logout();
-          return false;
-        }
-
-        const data = await res.json().catch(() => null) as any;
-        if (!data || !data.access_token) {
-          this.logout();
-          return false;
-        }
-
-        const newAccess = data.access_token as string;
-        const newRefresh = data.refresh_token || refreshToken;
-        this.storeTokens(newAccess, newRefresh);
-        return true;
-      } catch (err) {
-        // On network errors, treat as failed refresh
-        console.error('[ApiService] refreshAccessToken error', err);
-        this.logout();
-        return false;
-      } finally {
-        // clear the in-flight promise reference
-        this.refreshingPromise = null;
-      }
-    })();
-
-    return this.refreshingPromise;
-  }
-
-  private static async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const config: RequestInit = {
-      headers: {
-        'Content-Type': 'application/json',
-        ...this.getAuthHeaders(),
-        ...options.headers,
-      },
-      ...options,
-    };
-
-    const doFetch = async () => {
-      const response = await fetch(`${this.baseURL}${endpoint}`, config);
-      return response;
-    };
-
-    let response = await doFetch();
-
-    // If unauthorized, attempt token refresh (but avoid refreshing when calling auth endpoints)
-    if (response.status === 401 && !endpoint.startsWith('/auth')) {
-      const refreshed = await this.refreshAccessToken();
-      if (refreshed) {
-        config.headers = {
-          ...(config.headers || {}),
-          ...this.getAuthHeaders(),
+    private static async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+        const config: RequestInit = {
+            ...options,
+            headers: {
+                'Content-Type': 'application/json',
+                ...this.getAuthHeaders(),
+                ...(options.headers || {}),
+            },
         };
-        response = await doFetch();
-      } else {
-        // refresh failed, provide clearer error
-        // Ensure local session is cleared and redirect to login in the browser
-        this.logout();
-        if (typeof window !== 'undefined' && window.location) {
-          window.location.assign('/login');
+
+        const doFetch = async () => {
+            const response = await fetch(`${this.baseURL}${endpoint}`, config);
+            return response;
+        };
+
+        let response = await doFetch();
+
+        if (response.status === 401 && !endpoint.startsWith('/auth')) {
+            const refreshed = await this.refreshAccessToken();
+            if (refreshed) {
+                config.headers = {
+                    ...(config.headers || {}),
+                    ...this.getAuthHeaders(),
+                };
+                response = await doFetch();
+            } else {
+                this.logout();
+                if (typeof window !== 'undefined' && window.location) {
+                    window.location.assign('/login');
+                }
+                throw new Error('Sessão expirada. Faça login novamente.');
+            }
         }
-        throw new Error('Sessão expirada. Faça login novamente.');
-      }
+
+        if (!response.ok) {
+            let errorText: string | null = null;
+            try {
+                const txt = await response.text();
+                errorText = txt || null;
+            } catch {
+                // ignore
+            }
+            throw new Error(
+                `API request failed: ${response.status} ${response.statusText}${
+                    errorText ? ' - ' + errorText : ''
+                }`
+            );
+        }
+
+        if (response.status === 204) {
+            return undefined as unknown as T;
+        }
+
+        const contentLength = response.headers.get('content-length');
+        if (contentLength === '0') return undefined as unknown as T;
+
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            return response.json();
+        }
+
+        const text = await response.text();
+        if (!text) return undefined as unknown as T;
+        try {
+            return JSON.parse(text) as T;
+        } catch {
+            return text as unknown as T;
+        }
     }
 
-    if (!response.ok) {
-      // Try to surface server error message if present
-      let errorText: string | null = null;
-      try {
-        const txt = await response.text();
-        errorText = txt ? txt : null;
-      } catch (e) {
-        // ignore
-      }
-      throw new Error(`API request failed: ${response.status} ${response.statusText}${errorText ? ' - ' + errorText : ''}`);
-    }
-
-    // No content (204) -> return undefined for void responses
-    if (response.status === 204) {
-      return undefined as unknown as T;
-    }
-
-    // If there's no body, return undefined
-    const contentLength = response.headers.get('content-length');
-    if (contentLength === '0') return undefined as unknown as T;
-
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      return response.json();
-    }
-
-    // Fallback: try text then parse JSON if possible
-    const text = await response.text();
-    if (!text) return undefined as unknown as T;
-    try {
-      return JSON.parse(text) as T;
-    } catch (e) {
-      return text as unknown as T;
-    }
-  }
-
-  // Student endpoints
+    // Student endpoints
   static async getStudents(page: number = 1, size: number = 10): Promise<Student[]> {
     const endpoint = `/students?query=&page=${page}&size=${size}`;
     return this.request<Student[]>(endpoint);
@@ -358,6 +388,25 @@ class ApiService {
     const endpoint = `/enrollments?event_id=${encodeURIComponent(eventId)}`;
     return this.request<any[]>(endpoint);
   }
+
+    static async getCurrentClient(): Promise<Client> {
+        return this.request<Client>('/client');
+    }
+
+    static async createClient(data: CreateClientRequest): Promise<Client> {
+        return this.request<Client>('/client', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+// no Postman o update é PUT no mesmo /client (sem id)
+    static async updateClient(id: number, data: UpdateClientRequest): Promise<Client> {
+        return this.request<Client>('/client', {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    }
 }
 
 export { ApiService };

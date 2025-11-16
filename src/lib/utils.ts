@@ -102,3 +102,61 @@ export function removeCPFMask(cpf: string): string {
 export function removePhoneMask(phone: string): string {
   return phone.replace(/\D/g, '')
 }
+
+// === CNPJ ===
+export function maskCNPJ(value: string): string {
+    let digits = value.replace(/\D/g, '').slice(0, 14);
+
+    if (digits.length <= 2) {
+        return digits;
+    }
+    if (digits.length <= 5) {
+        return digits.replace(/^(\d{2})(\d+)/, '$1.$2');
+    }
+    if (digits.length <= 8) {
+        return digits.replace(/^(\d{2})(\d{3})(\d+)/, '$1.$2.$3');
+    }
+    if (digits.length <= 12) {
+        return digits.replace(
+            /^(\d{2})(\d{3})(\d{3})(\d+)/,
+            '$1.$2.$3/$4'
+        );
+    }
+    return digits.replace(
+        /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,
+        '$1.$2.$3/$4-$5'
+    );
+}
+
+export function removeCNPJMask(value: string): string {
+    return value.replace(/\D/g, '');
+}
+
+// Validação simplificada de CNPJ (com algoritmo de dígitos verificadores)
+export function isValidCNPJ(value: string): boolean {
+    const cnpj = removeCNPJMask(value);
+
+    if (cnpj.length !== 14) return false;
+
+    // Rejeita sequências repetidas
+    if (/^(\d)\1+$/.test(cnpj)) return false;
+
+    const calcDV = (len: number) => {
+        let soma = 0;
+        let peso = len - 7;
+        for (let i = 0; i < len; i++) {
+            soma += parseInt(cnpj.charAt(i), 10) * peso--;
+            if (peso < 2) peso = 9;
+        }
+        const resto = soma % 11;
+        return resto < 2 ? 0 : 11 - resto;
+    };
+
+    const dv1 = calcDV(12);
+    const dv2 = calcDV(13);
+
+    return (
+        dv1 === parseInt(cnpj.charAt(12), 10) &&
+        dv2 === parseInt(cnpj.charAt(13), 10)
+    );
+}
